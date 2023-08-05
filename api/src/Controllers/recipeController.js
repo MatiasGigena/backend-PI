@@ -1,5 +1,5 @@
 const { Recipe, Diet } = require("../db");
-const { API_KEY } = process.env;
+const process = require('process');
 const axios = require("axios");
 const { Op } = require("sequelize");
 
@@ -46,11 +46,27 @@ const searchRecipeByName = async (name) => {
     },
   });
 
-  const apiRecipe = (
-    await axios.get(
-      `https://api.spoonacular.com/recipes/complexSearch?apiKey=${API_KEY}&number=100&addRecipeInformation=true`
-    )
-  ).data;
+  let success = false;
+    let attempts = 0;
+    let apiRecipe;
+  
+    while (!success && attempts < 10) {
+      try {
+        const apiKey = process.env[`API_KEY${attempts + 1}`];
+        apiRecipe = (
+          await axios.get(
+            `https://api.spoonacular.com/recipes/complexSearch?apiKey=${apiKey}&number=100&addRecipeInformation=true`
+          )
+        ).data;
+        success = true;
+      } catch (error) {
+        attempts++;
+      }
+    }
+  
+    if (!success) {
+      throw new Error('No se pudo obtener datos de la API después de intentar con todas las claves de API');
+    }
   const newApi = cleanArray(apiRecipe.results);
 
   const filteredApi = newApi.filter((recipe) =>
@@ -71,11 +87,27 @@ const getAllRecipes = async () => {
     },
   });
 
-  const apiRecipe = (
-    await axios.get(
-      `https://api.spoonacular.com/recipes/complexSearch?apiKey=${API_KEY}&number=100&addRecipeInformation=true`
-    )
-  ).data;
+  let success = false;
+    let attempts = 0;
+    let apiRecipe;
+  
+    while (!success && attempts < 10) {
+      try {
+        const apiKey = process.env[`API_KEY${attempts + 1}`];
+        apiRecipe = (
+          await axios.get(
+            `https://api.spoonacular.com/recipes/complexSearch?apiKey=${apiKey}&number=100&addRecipeInformation=true`
+          )
+        ).data;
+        success = true;
+      } catch (error) {
+        attempts++;
+      }
+    }
+  
+    if (!success) {
+      throw new Error('No se pudo obtener datos de la API después de intentar con todas las claves de API');
+    }
   const newApi = cleanArray(apiRecipe.results);
   return [...databaseRecipe, ...newApi];
 };
@@ -100,15 +132,36 @@ const createController = async (
 };
 
 const getRecipeById = async (id, source) => {
-  const recipe =
-    source === "api"
-      ? (
+  let recipe;
+
+  if (source === "api") {
+    let success = false;
+    let attempts = 0;
+
+    while (!success && attempts < 10) {
+      try {
+        const apiKey = process.env[`API_KEY${attempts + 1}`];
+        recipe = (
           await axios.get(
-            `https://api.spoonacular.com/recipes/${id}/information?apiKey=${API_KEY}`
+            `https://api.spoonacular.com/recipes/${id}/information?apiKey=${apiKey}`
           )
-        ).data
-      : await Recipe.findByPk(id);
-  return source === "api" ? cleanArrayID([recipe]) : recipe;
+        ).data;
+        success = true;
+      } catch (error) {
+        attempts++;
+      }
+    }
+
+    if (!success) {
+      throw new Error('No se pudo obtener datos de la API después de intentar con todas las claves de API');
+    }
+
+    recipe = cleanArrayID([recipe]);
+  } else {
+    recipe = await Recipe.findByPk(id);
+  }
+
+  return recipe;
 };
 module.exports = {
   createController,
